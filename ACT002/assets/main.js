@@ -1,4 +1,3 @@
-// SEVENTEEN Members - loads members.json and builds the page.
 var members = [];
 var selectedId = "";
 var activeUnit = "All";
@@ -13,13 +12,11 @@ var elCrumb = document.getElementById("crumb");
 var elBack = document.getElementById("backBtn");
 var elFilter = document.getElementById("unitFilter");
 
-// Respect the visitor's "reduce motion" setting.
 var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 if (reduceMotion) {
   document.body.classList.add("reduce-motion");
 }
 
-// Escape text from the JSON before it goes into innerHTML.
 function escapeHTML(text) {
   return String(text)
     .replace(/&/g, "&amp;")
@@ -30,7 +27,7 @@ function escapeHTML(text) {
 }
 
 function fileNumber(i) {
-  return String(1000 + i + 1).slice(1); // 0 -> "001"
+  return String(1000 + i + 1).slice(1);
 }
 
 function showError(message) {
@@ -64,7 +61,6 @@ function renderFolders() {
     </button>`;
     shown++;
   }
-  // the front folder: a full folder that closes the stack
   html += `<div class="cover-folder">
     <span class="folder-tab cover-tab p-0"><span class="tab-text">THE COMPLETE COLLECTION</span></span>
     <div class="cover-text">
@@ -74,14 +70,13 @@ function renderFolders() {
   </div>`;
   elStack.innerHTML = html;
   updateSelection();
-  // stagger the entrance animation of the folders
+
   var folders = elStack.querySelectorAll(".folder");
   for (var j = 0; j < folders.length; j++) {
     folders[j].style.setProperty("--i", j);
   }
 }
 
-// Collect each unit once (in the order they appear in the JSON).
 function getUnits() {
   var units = [];
   for (var i = 0; i < members.length; i++) {
@@ -124,7 +119,6 @@ function handleFilterClick(event) {
   renderFolders();
 }
 
-// Age and days until the next birthday, worked out from the birthday text in the JSON.
 function birthdayInfo(text) {
   var born = new Date(text);
   if (isNaN(born.getTime())) {
@@ -167,7 +161,6 @@ function handleKey(event) {
   }
 }
 
-// Mark the last opened member on the folder (aria-pressed + outline).
 function updateSelection() {
   var buttons = document.querySelectorAll("button[data-id]");
   for (var i = 0; i < buttons.length; i++) {
@@ -232,7 +225,6 @@ function renderIdCard() {
     </div>
   </div>`;
 
-  // If a photo path is wrong, swap in the placeholder instead of a broken image icon.
   var img = elCard.querySelector(".photo-frame img");
   if (img) {
     img.addEventListener("error", function () {
@@ -267,7 +259,6 @@ function showHome() {
   }
 }
 
-// Folder click: other folders drop away, the clicked one rises to the top, then the detail opens.
 function openFolder(button) {
   var id = button.getAttribute("data-id");
   if (reduceMotion) {

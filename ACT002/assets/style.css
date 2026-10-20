@@ -123,7 +123,6 @@ body {
     transform: translateX(-2px);
 }
 
-/* ---------- Folder tones (theme palette) ---------- */
 .tone-0,
 .tone-3 {
     --fc: #b8b3a5;
@@ -147,7 +146,6 @@ body {
     --ft: #10110f;
 }
 
-/* ---------- Home: folder stack ---------- */
 .folder-stack {
     display: flex;
     flex-direction: column;
@@ -166,7 +164,6 @@ body {
     text-align: left;
     color: var(--ft);
     pointer-events: none;
-    /* only the tab and body react, not the empty tab zone */
     transition: margin-top 0.3s ease, transform 0.55s ease, opacity 0.4s ease;
 }
 
@@ -174,14 +171,12 @@ body {
     margin-top: 0;
 }
 
-/* hovering a folder pushes the next one down; its body continues behind the next tab */
 .folder:hover+.folder,
 .folder:focus-visible+.folder {
     margin-top: -1.7rem;
 }
 
 .folder::before {
-    /* folder body */
     content: "";
     position: absolute;
     inset: 1.7rem 0 0 0;
@@ -242,7 +237,6 @@ body {
 
 .folder-tab::before,
 .folder-tab::after {
-    /* curved shoulders where the tab meets the body */
     content: "";
     position: absolute;
     bottom: 0;
@@ -261,7 +255,6 @@ body {
 }
 
 .folder-meta {
-    /* visible only while the folder is open */
     position: absolute;
     top: 2.45rem;
     left: 3%;
@@ -287,8 +280,6 @@ body {
 .folder:focus-visible .folder-meta {
     opacity: 1;
 }
-
-/* click: other folders fall away, the chosen one rises to the top */
 .folder.is-opening {
     transform: translateY(var(--rise));
     z-index: 3;
@@ -302,8 +293,6 @@ body {
     opacity: 0;
     transform: translateY(3rem);
 }
-
-/* ---------- Profile: opened folder ---------- */
 .open-folder {
     position: relative;
     --pad: clamp(0.75rem, 3vw, 1.5rem);
@@ -455,9 +444,7 @@ body {
     overflow-wrap: anywhere;
 }
 
-/* fun-fact sheet + receipt overlap the paper */
 .scraps {
-    /* front flap of the folder */
     position: relative;
     z-index: 2;
     margin: -1.6rem calc(var(--padr) * -1) calc(var(--pad) * -1) calc(var(--pad) * -1);
@@ -535,7 +522,6 @@ body {
     transform: rotate(-5deg);
 }
 
-/* ---------- Extras: entrance, stats, unit filter, teammates ---------- */
 .folder {
     animation: folder-up 0.5s ease backwards;
     animation-delay: calc(var(--i, 0) * 45ms);
@@ -591,7 +577,6 @@ body {
     color: var(--brown);
 }
 
-/* ---------- Full folder: centered profile, tab on top, last folder complete ---------- */
 .detail-wrap {
     max-width: 64rem;
     margin-inline: auto;
@@ -609,7 +594,6 @@ body {
     padding-bottom: 1.2rem;
 }
 
-/* ---------- Front folder (full folder that ends the stack) + linen texture ---------- */
 .folder::before,
 .cover-folder::before {
     background-image:
@@ -680,7 +664,6 @@ body {
     transform: translateY(3rem);
 }
 
-/* ---------- Editorial finish: considered type and quiet interaction ---------- */
 body {
     letter-spacing: 0.005em;
     -webkit-font-smoothing: antialiased;
