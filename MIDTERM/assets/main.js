@@ -50,14 +50,39 @@ const link = {
     if (page > 1) p.set('page', page)
     return 'explore.html' + (p.toString() ? '?' + p : '')
   },
-  artwork: (id) => `artwork.html?id=${id}`,
-  artist: (name) => (name ? `artist.html?name=${encodeURIComponent(name)}` : 'artist.html'),
+  artwork: (id, from = '') => {
+    const p = new URLSearchParams({ id })
+    if (from) p.set('from', from)
+    return 'artwork.html?' + p
+  },
+  artist: (name, from = '') => {
+    const p = new URLSearchParams()
+    if (name) p.set('name', name)
+    if (from) p.set('from', from)
+    return 'artist.html' + (p.toString() ? '?' + p : '')
+  },
   artistIndex: (q, page) => {
     const p = new URLSearchParams()
     if (q) p.set('q', q)
     if (page > 1) p.set('page', page)
     return 'artist.html' + (p.toString() ? '?' + p : '')
   },
+  search: (q) => link.explore(q, null, 1),
+}
+
+function internalReturnPath(value, fallback) {
+  if (!value) return fallback
+
+  try {
+    const base = new URL('.', location.href)
+    const target = new URL(value, base)
+    if (target.origin !== base.origin || !target.pathname.startsWith(base.pathname)) return fallback
+    const pageName = target.pathname.slice(base.pathname.length)
+    if (pageName !== 'artist.html' && pageName !== 'explore.html') return fallback
+    return pageName + target.search + target.hash
+  } catch {
+    return fallback
+  }
 }
 
 const objectCache = new Map()
@@ -95,7 +120,7 @@ async function limited(fn) {
     lastApiRequestTime = Date.now()
     return fn()
   })
-  apiRequestQueue = request.catch(() => {})
+  apiRequestQueue = request.catch(() => { })
   return request
 }
 
@@ -359,10 +384,10 @@ function getArtistPreview(name) {
   return artistPreviewCache.get(name)
 }
 
-function card(o, variant = '') {
+function card(o, variant = '', from = '') {
   const by = o.artistDisplayName || o.culture || o.department
   return `
-    <a class="card ${variant}" href="${link.artwork(o.objectID)}">
+    <a class="card ${variant}" href="${link.artwork(o.objectID, from)}">
       <div class="card-media"><img src="${esc(o.primaryImageSmall)}" alt="${esc(o.title)}" loading="lazy" /></div>
       <h3>${esc(short(o.title))}</h3>
       <p>${esc(by)}${o.objectDate ? `<span> · ${esc(o.objectDate)}</span>` : ''}</p>
@@ -417,6 +442,55 @@ function initHeader() {
     const open = mobile.classList.toggle('open')
     toggle.setAttribute('aria-expanded', open)
   })
+  const searchToggle = $('.navbar-search-toggle')
+  const headerActions = searchToggle?.parentElement
+  if (searchToggle && headerActions) {
+    searchToggle.insertAdjacentHTML('beforebegin', `
+      <form class="search-bar navbar-search" id="navbar-search" role="search" aria-hidden="true">
+        <label for="navbar-search-q" class="sr-only">Search</label>
+        <input id="navbar-search-q" name="q" placeholder="Search by artwork, artist, or keyword..." autocomplete="off" tabindex="-1" />
+      </form>`)
+    const searchForm = $('#navbar-search', headerActions)
+    const searchInput = $('#navbar-search-q', searchForm)
+    const currentParams = new URLSearchParams(location.search)
+    searchInput.value = currentParams.get('q') || ''
+    searchToggle.setAttribute('aria-expanded', 'false')
+
+    function setSearchOpen(open) {
+      searchForm.classList.toggle('is-open', open)
+      searchForm.setAttribute('aria-hidden', String(!open))
+      searchToggle.setAttribute('aria-expanded', String(open))
+      searchInput.tabIndex = open ? 0 : -1
+      if (open) searchInput.focus()
+      else if (searchForm.contains(document.activeElement)) searchToggle.focus()
+    }
+
+    searchToggle.addEventListener('click', () => {
+      setSearchOpen(!searchForm.classList.contains('is-open'))
+    })
+    document.addEventListener('click', (event) => {
+      if (!searchForm.classList.contains('is-open')) return
+      if (searchForm.contains(event.target) || searchToggle.contains(event.target)) return
+      setSearchOpen(false)
+    })
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && searchForm.classList.contains('is-open')) setSearchOpen(false)
+    })
+    searchForm.addEventListener('submit', (event) => {
+      event.preventDefault()
+      const query = searchInput.value.trim()
+      if (!query) {
+        searchInput.focus()
+        return
+      }
+      setSearchOpen(false)
+      if (page === 'explore') {
+        window.dispatchEvent(new CustomEvent('curatora:artwork-search', { detail: { query } }))
+      } else {
+        location.href = link.search(query)
+      }
+    })
+  }
   const year = $('#year')
   if (year) year.textContent = new Date().getFullYear()
 }
@@ -535,7 +609,7 @@ function initExplore() {
         results.className = ''
         results.innerHTML = notice('No artworks found', 'Try a different term or another department.')
       } else {
-        results.innerHTML = objs.map((o) => card(o)).join('')
+        results.innerHTML = objs.map((o) => card(o, '', link.explore(state.q, state.dept, state.page))).join('')
       }
       if (failedIds.length) showTemporaryUnavailable(results, () => load())
       renderPagination(totalPages)
@@ -548,13 +622,19 @@ function initExplore() {
     }
   }
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault()
-    state.q = input.value.trim()
+  function submitQuery(query) {
+    state.q = query.trim()
+    input.value = state.q
     clear.hidden = !state.q
     syncUrl()
     load(true)
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault()
+    submitQuery(input.value)
   })
+  window.addEventListener('curatora:artwork-search', (event) => submitQuery(event.detail.query))
   input.addEventListener('input', () => (clear.hidden = !input.value))
   clear.addEventListener('click', () => {
     input.value = ''
@@ -586,6 +666,10 @@ function initExplore() {
 
 async function initArtwork() {
   const id = Number(params.get('id')) || 436535
+  const backLink = $('#artwork-back')
+  const artworkFrom = internalReturnPath(params.get('from'), 'explore.html')
+  backLink.href = artworkFrom
+  backLink.querySelector('span').textContent = artworkFrom.startsWith('artist.html?name=') ? 'Back to Artist' : 'Back to Explore'
   const root = $('#artwork')
   root.innerHTML = `<div class="detail skeleton"><div class="block" style="height:520px"></div><div><div class="line" style="height:40px"></div><div class="line short"></div></div></div>`
 
@@ -726,7 +810,7 @@ function renderArtistIndex() {
         </div>
         <form class="search-bar" id="artist-form" role="search">
           <label for="artist-q" class="sr-only">Find an artist</label>
-          <input id="artist-q" value="${esc(state.query)}" placeholder="Find an artist, e.g. Monet" autocomplete="off" />
+          <input id="artist-q" value="${esc(state.query)}" placeholder="Find an artist, e.g. Van Gogh" autocomplete="off" />
           <button type="submit" class="search-submit" aria-label="Find artist">${ICON.search(18)}</button>
         </form>
       </section>
@@ -823,7 +907,7 @@ function renderArtistIndex() {
     const firstIndex = (state.page - 1) * pageSize
     const artists = matches.slice(firstIndex, firstIndex + pageSize)
     grid.innerHTML = artists.map((name, index) => `
-      <a class="artist-tile" href="${link.artist(name)}" data-artist="${esc(name)}">
+      <a class="artist-tile" href="${link.artist(name, link.artistIndex(state.query, state.page))}" data-artist="${esc(name)}">
         <div class="media skeleton"><span class="num">${String(firstIndex + index + 1).padStart(2, '0')}</span></div>
         <div class="row">
           <div><h2>${esc(name)}</h2><p class="bio">&nbsp;</p></div>
@@ -856,12 +940,17 @@ function renderArtistIndex() {
 async function renderProfile(name) {
   const root = $('#artist-root')
   const state = { works: [], total: 0, offset: 0 }
+  const listingUrl = internalReturnPath(params.get('from'), 'artist.html')
+  const profileUrl = link.artist(name, listingUrl === 'artist.html' ? '' : listingUrl)
 
   root.innerHTML = `
     <section class="profile-hero">
       <div class="container profile-grid">
         <div class="fade-up">
-          <a class="crumb" href="artist.html">Artists</a>
+          <a class="profile-back-link" href="${esc(listingUrl)}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6" /></svg>
+            <span>Back to Artists</span>
+          </a>
           <h1 id="artist-name">${esc(name)}</h1>
           <div id="artist-facts"><div class="dark-skeleton" style="height:96px;max-width:380px;margin-top:24px"></div></div>
         </div>
@@ -900,14 +989,14 @@ async function renderProfile(name) {
         }
         if (state.works.length) {
           renderLead(state.works[0], state.total)
-          grid.innerHTML = state.works.slice(1).map((o) => card(o)).join('')
+          grid.innerHTML = state.works.slice(1).map((o) => card(o, '', profileUrl)).join('')
         } else {
           $('#artist-facts').innerHTML = '<p class="bio">Artist details are temporarily unavailable.</p>'
           $('#artist-lead').innerHTML = '<p class="bio">Artwork preview temporarily unavailable.</p>'
           grid.innerHTML = ''
         }
       } else {
-        grid.insertAdjacentHTML('beforeend', fresh.map((o) => card(o)).join(''))
+        grid.insertAdjacentHTML('beforeend', fresh.map((o) => card(o, '', profileUrl)).join(''))
       }
       more.hidden = state.offset >= state.total
       if (r.failedIds.length) showTemporaryUnavailable(grid, () => load(offset))
@@ -935,7 +1024,7 @@ async function renderProfile(name) {
       </dl>
       ${lead.artistWikidata_URL ? `<a class="wiki" href="${esc(lead.artistWikidata_URL)}" target="_blank" rel="noreferrer">Read more on Wikidata ${ICON.arrowUpRight(14)}</a>` : ''}`
     $('#artist-lead').innerHTML = `
-      <a href="${link.artwork(lead.objectID)}">
+      <a href="${link.artwork(lead.objectID, profileUrl)}">
         <img class="fade-up" src="${esc(lead.primaryImageSmall)}" alt="${esc(lead.title)}" />
         <p><em>${esc(lead.title)}</em>${lead.objectDate ? ` · ${esc(lead.objectDate)}` : ''}</p>
       </a>`

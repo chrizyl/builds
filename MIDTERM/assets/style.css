@@ -184,7 +184,37 @@ em {
 
 .header-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.search-bar.navbar-search {
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-color: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: width 0.28s ease, flex-basis 0.28s ease, margin 0.28s ease, padding 0.28s ease, opacity 0.2s ease;
+}
+
+.search-bar.navbar-search.is-open {
+  flex-basis: min(320px, 55vw);
+  width: min(320px, 55vw);
+  margin-right: 8px;
+  padding: 4px;
+  border-color: var(--line);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.search-bar.navbar-search input {
+  width: 100%;
+  min-width: 0;
+  padding-left: 8px;
 }
 
 .icon-btn {
@@ -1516,12 +1546,18 @@ a.detail-artist:hover {
   }
 }
 
-.profile-hero .crumb {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
+.profile-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  font-weight: 500;
   color: var(--gold);
+}
+
+.profile-back-link:hover {
+  color: var(--ivory);
 }
 
 .profile-hero h1 {
